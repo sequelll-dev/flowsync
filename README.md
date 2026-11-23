@@ -4,6 +4,34 @@ Personal productivity and task management.
 
 FlowSync is a local personal productivity workspace for task and deadline management, calendar integration, daily journaling, and check-ins. It is built incrementally with React, TypeScript, Vite, Tailwind CSS, and Lucide React.
 
+## Project milestones
+
+1. Project initialization — complete.
+2. Visual foundation — complete.
+3. Task engine — complete.
+4. Task workspace — complete.
+5. Dashboard and calendar — complete.
+6. In-app notifications — next.
+7. Personal productivity tools — daily check-ins and journal.
+8. Settings and data management — validated import/export and data clearing.
+9. Testing and refinement — full feature, accessibility, responsive, and persistence verification.
+10. Windows desktop application — final milestone, after milestones 1–9.
+
+### Milestone 10 — Windows desktop application
+
+Package the completed FlowSync application as an installable Windows desktop app, reusing the React interface, repository architecture, existing features, and all 19 design restrictions. Choose the desktop framework during this milestone; Electron and Tauri are candidates, not a committed stack change.
+
+Deliverables and acceptance criteria:
+
+- Build a Windows installer and launch FlowSync in its own application window, with a desktop shortcut option.
+- Bundle the production application so normal use requires neither a running Vite server nor an internet connection.
+- Preserve local data across application restarts and supported upgrades, without adding a backend or requiring an account.
+- Support transferring browser data through the validated export/import functionality from milestone 8; do not assume browser LocalStorage is shared with the desktop app.
+- Verify every implemented feature in the packaged app, including navigation, task views, calendar, reminders while the app is open, journal, check-ins, themes, and data management.
+- Verify installation, launch, restart persistence, and uninstall behavior; document installer requirements, build steps, and local data location.
+
+This extends the final project completion criteria to include a working, tested Windows desktop package and documented browser-to-desktop data transfer. Browser push, background reminders, and other previously excluded features remain outside scope. Milestone 10 is planned only; no desktop framework or packaging dependencies are installed yet.
+
 ## Current milestone
 
 **Milestone 5 — Dashboard and calendar.** Task creation, editing, confirmed deletion, completion/reopening, priorities, statuses, optional descriptions, and local due dates now work on My Tasks and the dashboard. The dashboard shows the shared Kanban/List task workspace and counts derived from all saved tasks. My Tasks keeps every task accessible, including completed tasks. Reusable native dialogs provide keyboard focus containment, Escape handling, validation, and save-failure feedback.
