@@ -4,8 +4,6 @@ Personal productivity and task management.
 
 FlowSync is a local personal productivity workspace for task and deadline management, calendar integration, daily journaling, and check-ins. It is built incrementally with React, TypeScript, Vite, Tailwind CSS, and Lucide React.
 
-The FlowSync name replaces the original project name. All previously established features, architecture requirements, milestone boundaries, and 19 design restrictions remain unchanged.
-
 ## Current milestone
 
 **Milestone 5 — Dashboard and calendar.** Task creation, editing, confirmed deletion, completion/reopening, priorities, statuses, optional descriptions, and local due dates now work on My Tasks and the dashboard. The dashboard shows the shared Kanban/List task workspace and counts derived from all saved tasks. My Tasks keeps every task accessible, including completed tasks. Reusable native dialogs provide keyboard focus containment, Escape handling, validation, and save-failure feedback.
