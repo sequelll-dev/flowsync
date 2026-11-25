@@ -26,7 +26,15 @@ export function TaskCollection({ compact = false }: { compact?: boolean }) {
   tasks.forEach(task => counts[task.status]++)
   async function changeStatus(task: Task, status: TaskStatus) {
     if (task.status === status) return
+    const focused = document.activeElement
+    const restoreFocus = focused?.closest('[data-task-id]')?.getAttribute('data-task-id') === task.id
+    const target = focused?.tagName === 'SELECT' ? 'select' : '.completion-button'
     if (await save({ ...task, status }, task.id, task.updatedAt)) setMessage(`${task.title} moved to ${statusLabels[status]}.`)
+    if (restoreFocus) window.requestAnimationFrame(() => {
+      const row = Array.from(document.querySelectorAll<HTMLElement>('[data-task-id]')).find(element => element.dataset.taskId === task.id)
+      const control = row?.querySelector<HTMLElement>(target) ?? document.getElementById('task-search') ?? document.getElementById('main-content')
+      control?.focus()
+    })
   }
   const actions = { saving, onEdit: (task: Task) => setEditor({ task }), onDelete: (task: Task) => { setDeleting(task); setDeleteAttempted(false) }, onStatus: changeStatus }
   return <section className={`task-workspace ${!compact && taskView === 'kanban' ? 'board-workspace' : ''}`} aria-label="Tasks">

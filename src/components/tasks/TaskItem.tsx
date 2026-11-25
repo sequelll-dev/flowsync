@@ -11,7 +11,7 @@ export interface TaskItemActions {
 }
 interface Props extends TaskItemActions { task: Task; board?: boolean; compact?: boolean; dragging?: boolean; onDragStart?: (id: string) => void; onDragEnd?: () => void }
 export function TaskItem({ task, board, compact, dragging, onDragStart, onDragEnd, onEdit, onDelete, onStatus, saving }: Props) {
-  return <li className={`task-record ${board ? 'task-card' : ''} ${task.status === 'completed' ? 'is-completed' : ''} ${dragging ? 'is-dragging' : ''}`}>
+  return <li data-task-id={task.id} className={`task-record ${board ? 'task-card' : ''} ${task.status === 'completed' ? 'is-completed' : ''} ${dragging ? 'is-dragging' : ''}`}>
     {board ? <div className="drag-handle" draggable={!saving} onDragStart={event => {
       event.dataTransfer.setData('application/x-flowsync-task', task.id)
       event.dataTransfer.effectAllowed = 'move'; onDragStart?.(task.id)

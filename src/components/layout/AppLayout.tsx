@@ -1,3 +1,4 @@
+import { NotificationCenter } from '../notifications/NotificationCenter'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Menu, Moon, Search, Sun, X } from 'lucide-react'
@@ -46,6 +47,7 @@ export function AppLayout({ path, children }: { path: string; children: ReactNod
       </button>
       <div className="breadcrumb"><span>Personal workspace</span><span aria-hidden="true">/</span><span>{page}</span></div>
       <a className="icon-button header-search" href="#/tasks" aria-label="Search tasks" title="Search tasks" onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { setOpen(false); setSearchRequested(true) } }}><Search size={19} strokeWidth={1.7} aria-hidden="true" /></a>
+      <NotificationCenter onOpen={() => { setOpen(false); setSearchRequested(false) }} />
       <button type="button" className="icon-button theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>
         {theme === 'dark' ? <Sun size={19} strokeWidth={1.7} /> : <Moon size={19} strokeWidth={1.7} />}

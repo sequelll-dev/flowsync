@@ -11,8 +11,8 @@ FlowSync is a local personal productivity workspace for task and deadline manage
 3. Task engine — complete.
 4. Task workspace — complete.
 5. Dashboard and calendar — complete.
-6. In-app notifications — next.
-7. Personal productivity tools — daily check-ins and journal.
+6. In-app notifications — complete.
+7. Personal productivity tools — next: daily check-ins and journal.
 8. Settings and data management — validated import/export and data clearing.
 9. Testing and refinement — full feature, accessibility, responsive, and persistence verification.
 10. Windows desktop application — final milestone, after milestones 1–9.
@@ -34,13 +34,13 @@ This extends the final project completion criteria to include a working, tested 
 
 ## Current milestone
 
-**Milestone 5 — Dashboard and calendar.** Task creation, editing, confirmed deletion, completion/reopening, priorities, statuses, optional descriptions, and local due dates now work on My Tasks and the dashboard. The dashboard shows the shared Kanban/List task workspace and counts derived from all saved tasks. My Tasks keeps every task accessible, including completed tasks. Reusable native dialogs provide keyboard focus containment, Escape handling, validation, and save-failure feedback.
+**Milestone 6 — In-app notifications.** Task creation, editing, confirmed deletion, completion/reopening, priorities, statuses, optional descriptions, and local due dates now work on My Tasks and the dashboard. The dashboard shows the shared Kanban/List task workspace and counts derived from all saved tasks. My Tasks keeps every task accessible, including completed tasks. Reusable native dialogs provide keyboard focus containment, Escape handling, validation, and save-failure feedback.
 
 Task operations use an asynchronous repository contract and a versioned LocalStorage implementation at `flowsync.tasks`. Components and hooks never access LocalStorage directly. Changes appear after a successful save. Missing storage starts empty; malformed, incompatible, invalid-date, or duplicate-ID records block mutations without overwriting existing data. Failed writes preserve the editor draft and previously saved tasks.
 
 The responsive shell, five navigation destinations, light/dark themes, saved appearance, and offline daily quote remain available. Navigation uses native hash links and browser history, with no routing dependency. Direct links such as `/#/tasks` work with Vite or a static host. Unknown routes offer a recovery link.
 
-My Tasks now offers Kanban and List views over the same repository. Search matches titles and descriptions; priority and status filters combine with search and apply to both views. Clear filters resets all three. Sort by ascending due date (undated tasks last), priority (high first), creation (newest first), or title. View switching preserves the active filters and does not alter task records. The dashboard combines the task board with a monthly calendar, selected-date task details/creation, and sorted overdue/upcoming deadlines. Calendar and deadlines derive directly from the task repository. Completed tasks remain on their calendar dates but are excluded from active deadline lists; undated tasks appear in neither. Reminders, journal/check-in tools, and import/export remain in later milestones. No sample tasks are seeded into user storage.
+My Tasks now offers Kanban and List views over the same repository. Search matches titles and descriptions; priority and status filters combine with search and apply to both views. Clear filters resets all three. Sort by ascending due date (undated tasks last), priority (high first), creation (newest first), or title. View switching preserves the active filters and does not alter task records. The dashboard combines the task board with a monthly calendar, selected-date task details/creation, and sorted overdue/upcoming deadlines. Calendar and deadlines derive directly from the task repository. Completed tasks remain on their calendar dates but are excluded from active deadline lists; undated tasks appear in neither. In-app reminders now cover unfinished tasks due within three calendar days, today, or overdue. Journal/check-in tools and import/export remain in later milestones. No sample tasks are seeded into user storage.
 
 ## Requirements
 
@@ -108,7 +108,7 @@ Empty directories contain `.gitkeep` files to preserve the planned structure in 
 
 ## Next milestone
 
-Milestone 6 adds in-app deadline reminders, persistent deduplication, a notification panel, read state, and dismissal. Development stops after Milestone 5 until the next instruction.
+Milestone 7 adds daily check-ins and journal entries, including editing, history, local persistence, and journal save-state feedback. Development stops after Milestone 6 until the next instruction.
 
 ## Configuration references
 
@@ -188,3 +188,33 @@ Run the targeted audit with `node scripts/workspace.audit.mjs`, using the existi
 - **Next:** Milestone 6, pending the next development instruction.
 
 Run `node scripts/milestone5.smoke.mjs` with the existing Playwright setup and running dev server described above. Desktop and mobile calendar previews are written into the ignored `artifacts/` folder. To use the calendar, select a date and use its add button, or open a task from the selected-date, overdue, or upcoming section. Dates without tasks remain selectable.
+
+## Milestone 6 report
+
+- **Implemented:** a header notification button and unread count; an accessible notification dialog; overdue, due-today, and due-soon reminders; opening the associated task in the existing editor; individual read and dismissal controls; mark-all-as-read; visible read/unread states; empty/loading/unavailable states; storage failure feedback; responsive light/dark styling and keyboard focus restoration.
+- **Reminder policy:** due-soon means one to three local calendar days ahead. Completed/undated tasks and tasks more than three days away generate no current reminder. The identifier combines task ID, date-only deadline, and reminder type. An upcoming reminder can become a separate due-today or overdue reminder, once per type/deadline. An overdue reminder is not recreated every day. Read/dismiss state persists across rerenders and refreshes, including when a completed task is later reopened with the same deadline/type. Changed due dates use new identities. Deleted, completed, undated, rescheduled, and outdated-type reminders are hidden from the current panel.
+- **Architecture:** eligibility is derived from the existing task provider and shared local-clock hook. A notification repository stores schema-version-1 records at `flowsync.notifications`, through the centralized storage service. Records store IDs, deadline/type, generation time, and read/dismiss timestamps; titles always come from the current task. Historical state is retained for deduplication and future export. There is no separate task database, new dependency, browser notification permission, push/email integration, service worker, or background delivery.
+- **Reliability:** validation rejects malformed JSON, incompatible schemas, invalid records, and duplicate notification IDs without overwriting them. Read/dismiss actions merge with the latest saved state across tabs. Storage failures retain usable session-only reminders and actions with an explicit warning; those actions can be persisted when storage recovers. Unchanged state is not rewritten to LocalStorage.
+- **Created:** `src/types/notification.ts`, `src/services/notificationService.ts`, `src/repositories/interfaces/NotificationRepository.ts`, `src/repositories/local/LocalNotificationRepository.ts`, `src/hooks/useNotifications.ts`, `src/components/notifications/NotificationCenter.tsx`, and `scripts/milestone6.smoke.mjs`.
+- **Modified:** `src/components/layout/AppLayout.tsx` (notification access), `src/styles/index.css` (notification UI and compact mobile header spacing), and this README.
+- **Verified:** correct reminder types and ordering; completed/undated/far-future exclusions; persistent deduplication, read, and dismissed state; task editing and completion through a reminder; date-edit and deletion invalidation; cross-tab state; local-midnight transitions in a negative UTC offset; mark-all-as-read; malformed/unsupported data preservation; quota failure/session behavior and recovery; both themes; responsive widths at desktop, 820, 390, and 320 pixels; Escape and focus restoration. Desktop/light/dark/mobile screenshots were visually reviewed. Tests used isolated browser contexts and did not seed or clear actual user data.
+- **Build/regression:** TypeScript and Vite production build passed. Milestone 2, 3, 4, and 5 browser suites and all seven workspace audit checks passed alongside the reminder suite.
+- **Known limits:** reminders are evaluated only while the app is open. They do not run when it is closed. Physical-device and non-Chrome testing remain unverified; LocalStorage does not provide atomic database transactions across simultaneous tabs. There are no known blocking milestone 6 issues.
+- **Next:** Milestone 7, pending the next development instruction. Windows desktop packaging remains the final milestone (10).
+
+Run `node scripts/milestone6.smoke.mjs` with the existing Playwright setup and local dev server described above. Notification screenshots are saved in the Git-ignored `artifacts/` directory. Use the bell in the header to review reminders; opening one also marks it as read. Dismissing one does not delete its task.
+
+## Full debug pass — November 25, 2026
+
+Ran every implemented milestone 2–6 browser suite and the existing workspace audit, then added targeted checks for storage resets and keyboard focus. The existing baseline passed; four additional assertions initially failed and now pass:
+
+- **Cross-tab reminder-cache restoration:** a storage-clear event previously merged old in-memory reminder history back into cleared storage. Storage subscriptions now distinguish clear/remove events. The reminder hook drops cached history on reset and waits for refreshed tasks after a full clear, rather than regenerating records from the previous task snapshot.
+- **Task status focus loss:** moving a task to another Kanban column remounted its controls and lost keyboard focus. Status actions now restore focus to the moved task's status/completion control after a save (or back to the search field when filtering removes the task).
+- **Reminder dismissal focus loss:** removing the focused reminder left focus on a noninteractive part of its dialog. Dismiss actions now focus the next/previous reminder title or the close control if the list is empty.
+- **Read-action focus loss:** read controls become disabled after use. Read actions now focus an enabled reminder title rather than leaving keyboard focus on a disabled control.
+
+Files changed: `src/services/storageService.ts`, `src/repositories/interfaces/NotificationRepository.ts`, `src/hooks/useNotifications.ts`, `src/components/tasks/TaskItem.tsx`, `src/components/tasks/TaskCollection.tsx`, `src/components/notifications/NotificationCenter.tsx`, this README, and new `scripts/workspace.audit2.mjs`.
+
+Verification: all milestone browser suites (2–6), the original seven audit checks, and all four new checks passed. TypeScript and Vite production build passed. The dependency advisory audit returned zero known vulnerabilities, and the credential-pattern scan found no matches. Tests ran in isolated Chrome contexts; no existing user data was cleared or replaced. Physical-device and non-Chrome behavior remains unverified. Milestone 7 was not started.
+
+Run `node scripts/workspace.audit2.mjs` with the same Playwright configuration and running dev server described above to rerun the new regressions.

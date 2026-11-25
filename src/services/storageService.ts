@@ -1,9 +1,10 @@
+export interface StorageChange { cleared: boolean; removed: boolean }
 export interface StorageResult<T> { value: T; error: string | null; missing?: boolean }
 
 export const storageService = {
-  subscribe(key: string, onChange: () => void): () => void {
+  subscribe(key: string, onChange: (change: StorageChange) => void): () => void {
     function changed(event: StorageEvent) {
-      if (event.key === key || event.key === null) onChange()
+      if (event.key === key || event.key === null) onChange({ cleared: event.key === null, removed: event.newValue === null })
     }
     window.addEventListener('storage', changed)
     return () => window.removeEventListener('storage', changed)

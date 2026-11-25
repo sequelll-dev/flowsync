@@ -366,3 +366,24 @@ h3 { font-size: .9rem; font-weight: 500; }
 @media (min-width: 1201px) {
   .dashboard-primary .kanban-board { grid-template-columns: repeat(3, minmax(218px, 1fr)); min-width: 686px; }
 }
+
+.notification-trigger { position: relative; }
+.notification-badge { position: absolute; top: 1px; right: 0; padding: 1px 4px; min-width: 16px; border-radius: 3px; background: var(--accent-background); color: var(--accent-text); font-size: .65rem; line-height: 1.3; }
+.notification-intro { color: var(--muted); font-size: .85rem; line-height: 1.8; margin-bottom: 20px; }
+.notification-tools { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.notification-tools p { color: var(--muted); font-size: .8rem; }
+.notification-list { list-style: none; margin: 0; padding: 0; }
+.notification-item { padding: 20px 0; border-top: 1px solid var(--border); }
+.notification-kind { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: .75rem; }
+.notification-item.is-unread .notification-kind > span:last-child { color: var(--accent-text); }
+.notification-task { display: block; background: transparent; border: 0; color: var(--text); font: inherit; font-size: .95rem; text-align: left; padding: 12px 0 8px; width: 100%; overflow-wrap: anywhere; }
+.notification-task:hover { color: var(--accent-text); text-decoration: underline; text-underline-offset: 4px; }
+.notification-date { display: block; color: var(--muted); font-size: .8rem; }
+.notification-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.notification-actions .button { min-height: 44px; font-size: .78rem; }
+.notification-empty { padding-block: 20px; color: var(--muted); font-size: .9rem; line-height: 1.8; }
+@media (max-width: 700px) {
+  .topbar { padding-inline: 12px; gap: 6px; }
+  .topbar .icon-button { width: 40px; }
+  .topbar .breadcrumb { display: block; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
