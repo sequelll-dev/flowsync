@@ -1,6 +1,6 @@
 // Original FlowSync reflections, bundled locally for offline use.
 const quotes = [
-  'One small step is still a step forward.',
+  'Sequel Pogi',
   'Give your attention to the next thing you can change.',
   'A little progress today is a kindness to your future self.',
   'Make room for steady effort and a little patience.',

@@ -12,9 +12,9 @@ FlowSync is a local personal productivity workspace for task and deadline manage
 4. Task workspace — complete.
 5. Dashboard and calendar — complete.
 6. In-app notifications — complete.
-7. Personal productivity tools — next: daily check-ins and journal.
-8. Settings and data management — validated import/export and data clearing.
-9. Testing and refinement — full feature, accessibility, responsive, and persistence verification.
+7. Personal productivity tools — complete: daily check-ins and journal.
+8. Settings and data management — complete.
+9. Testing and refinement — complete.
 10. Windows desktop application — final milestone, after milestones 1–9.
 
 ### Milestone 10 — Windows desktop application
@@ -34,13 +34,13 @@ This extends the final project completion criteria to include a working, tested 
 
 ## Current milestone
 
-**Milestone 6 — In-app notifications.** Task creation, editing, confirmed deletion, completion/reopening, priorities, statuses, optional descriptions, and local due dates now work on My Tasks and the dashboard. The dashboard shows the shared Kanban/List task workspace and counts derived from all saved tasks. My Tasks keeps every task accessible, including completed tasks. Reusable native dialogs provide keyboard focus containment, Escape handling, validation, and save-failure feedback.
+**Milestone 9 — Testing and refinement.** Task creation, editing, confirmed deletion, completion/reopening, priorities, statuses, optional descriptions, and local due dates now work on My Tasks and the dashboard. The dashboard shows the shared Kanban/List task workspace and counts derived from all saved tasks. My Tasks keeps every task accessible, including completed tasks. Reusable native dialogs provide keyboard focus containment, Escape handling, validation, and save-failure feedback.
 
 Task operations use an asynchronous repository contract and a versioned LocalStorage implementation at `flowsync.tasks`. Components and hooks never access LocalStorage directly. Changes appear after a successful save. Missing storage starts empty; malformed, incompatible, invalid-date, or duplicate-ID records block mutations without overwriting existing data. Failed writes preserve the editor draft and previously saved tasks.
 
 The responsive shell, five navigation destinations, light/dark themes, saved appearance, and offline daily quote remain available. Navigation uses native hash links and browser history, with no routing dependency. Direct links such as `/#/tasks` work with Vite or a static host. Unknown routes offer a recovery link.
 
-My Tasks now offers Kanban and List views over the same repository. Search matches titles and descriptions; priority and status filters combine with search and apply to both views. Clear filters resets all three. Sort by ascending due date (undated tasks last), priority (high first), creation (newest first), or title. View switching preserves the active filters and does not alter task records. The dashboard combines the task board with a monthly calendar, selected-date task details/creation, and sorted overdue/upcoming deadlines. Calendar and deadlines derive directly from the task repository. Completed tasks remain on their calendar dates but are excluded from active deadline lists; undated tasks appear in neither. In-app reminders now cover unfinished tasks due within three calendar days, today, or overdue. Journal/check-in tools and import/export remain in later milestones. No sample tasks are seeded into user storage.
+My Tasks now offers Kanban and List views over the same repository. Search matches titles and descriptions; priority and status filters combine with search and apply to both views. Clear filters resets all three. Sort by ascending due date (undated tasks last), priority (high first), creation (newest first), or title. View switching preserves the active filters and does not alter task records. The dashboard combines the task board with a monthly calendar, selected-date task details/creation, and sorted overdue/upcoming deadlines. Calendar and deadlines derive directly from the task repository. Completed tasks remain on their calendar dates but are excluded from active deadline lists; undated tasks appear in neither. In-app reminders now cover unfinished tasks due within three calendar days, today, or overdue. Daily check-ins and a searchable autosaving journal are available. Settings now includes full JSON export, validated import preview/replacement, and confirmed data clearing. No sample tasks are seeded into user storage.
 
 ## Requirements
 
@@ -62,16 +62,33 @@ If using npm instead, run `npm install` and `npm run dev`. pnpm is the project's
 ## Verification and production build
 
 ```sh
+pnpm install --frozen-lockfile
+pnpm verify
+```
+
+Verification requires an installed Google Chrome browser by default. Playwright, axe-core, and Prettier are development dependencies; no machine-specific runtime paths are needed. `pnpm verify` checks formatting, checks TypeScript, builds the production bundle, starts a private local preview at http://127.0.0.1:4174, runs every milestone/audit suite, and stops its own preview server. It does not stop the development server or touch your regular browser profile. A failing check returns a nonzero exit code. Individual suites have a three-minute runtime limit.
+
+To verify with installed Microsoft Edge in PowerShell:
+
+```powershell
+$env:FLOWSYNC_BROWSER = 'msedge'
+pnpm verify
+Remove-Item Env:\FLOWSYNC_BROWSER
+```
+
+`FLOWSYNC_TEST_URL` can point the runner at an already-running app instead of starting its own preview. Individual suites remain available through `node scripts/milestone8.smoke.mjs` and the other scripts. Older `FLOWSYNC_PLAYWRIGHT_MODULE` overrides are optional; leave them unset for the project-installed Playwright package.
+
+```sh
 pnpm typecheck
 pnpm build
 pnpm preview
+pnpm format:check
+pnpm format
 ```
 
-The build checks TypeScript and writes the production bundle to `dist/`. Preview serves that bundle locally, normally at http://127.0.0.1:4173. npm equivalents are `npm run typecheck`, `npm run build`, and `npm run preview`.
+The build writes `dist/`; standalone preview normally uses http://127.0.0.1:4173. `pnpm format` applies the checked-in formatting rules to source, tests, configuration, and documentation. npm equivalents use `npm run` before each script name. Do not maintain competing lockfiles when updating dependencies.
 
-Milestone 2 includes `scripts/milestone2.smoke.mjs`. It uses Playwright with an installed Chrome browser. Supply an existing Playwright module through `FLOWSYNC_PLAYWRIGHT_MODULE`, or install Playwright in your test environment. Run `node scripts/milestone2.smoke.mjs` while the development server is running. `FLOWSYNC_TEST_URL` optionally changes the test URL. Screenshots are written to the Git-ignored `artifacts/` directory. Test storage uses isolated browser contexts and does not alter your browsing profile.
-
-Milestone 1 verification: dependency installation and `pnpm build` passed using Node.js 24.22.3 and pnpm 11.25.0. The Vite development server started successfully at http://127.0.0.1:5173. The startup page and icon rendered in the in-app browser, with no browser console warnings or errors captured.
+Test browsers use isolated contexts and fixtures. They never clear or seed your normal browser profile. Screenshots and the axe report (`artifacts/milestone9-accessibility.json`) are Git-ignored. Automated accessibility checks supplement keyboard and visual checks; they are not a substitute for a manual screen-reader or physical-device audit.
 
 ## Project structure
 
@@ -104,11 +121,11 @@ vite.config.ts             React and Tailwind plugins
 tsconfig*.json             Strict app and tooling type checks
 ```
 
-Empty directories contain `.gitkeep` files to preserve the planned structure in Git. Components and hooks do not access LocalStorage directly. `LocalPreferencesRepository` validates schema version 1 at `flowsync.preferences`; `storageService` owns JSON parsing and storage access. Reads never silently replace invalid data. A deliberate theme change can save a valid preference, and write failures leave a working session theme with feedback. The task repository now uses the same centralized service with task-specific error messages. Journal and check-in repositories remain for later milestones.
+Empty directories contain `.gitkeep` files to preserve the planned structure in Git. Components and hooks do not access LocalStorage directly. `LocalPreferencesRepository` validates schema version 1 at `flowsync.preferences`; `storageService` owns JSON parsing and storage access. Reads never silently replace invalid data. A deliberate theme change can save a valid preference, and write failures leave a working session theme with feedback. The task repository now uses the same centralized service with task-specific error messages. Journal and check-in repositories use separate validated logical stores. After an import or clear, `flowsync.workspace` supplies an immutable generation snapshot and ordinary updates use independent `flowsync.store.<revision>.<logical-key>` records. This keeps task and journal writes from replacing each other. Import/clear publishes a new snapshot atomically and cleans up old generation records. Backup JSON exports logical data rather than these internal storage details.
 
 ## Next milestone
 
-Milestone 7 adds daily check-ins and journal entries, including editing, history, local persistence, and journal save-state feedback. Development stops after Milestone 6 until the next instruction.
+Milestone 10 packages the verified web application as an installable Windows desktop app. No desktop framework or packaging work has started; the choice of wrapper remains open until that milestone.
 
 ## Configuration references
 
@@ -218,3 +235,48 @@ Files changed: `src/services/storageService.ts`, `src/repositories/interfaces/No
 Verification: all milestone browser suites (2–6), the original seven audit checks, and all four new checks passed. TypeScript and Vite production build passed. The dependency advisory audit returned zero known vulnerabilities, and the credential-pattern scan found no matches. Tests ran in isolated Chrome contexts; no existing user data was cleared or replaced. Physical-device and non-Chrome behavior remains unverified. Milestone 7 was not started.
 
 Run `node scripts/workspace.audit2.mjs` with the same Playwright configuration and running dev server described above to rerun the new regressions.
+
+## Milestone 7 report
+
+- **Daily Check-In:** create/edit one entry per local date; optional text-based mood selection, daily goal, reflection, and accomplishments; dated history; explicit save state; automatic loading of an existing check-in when its date is selected. Unsaved drafts remain available across in-app navigation. Switching dates or reloading a dirty draft asks before discarding it.
+- **Daily Journal:** create multiple dated entries; edit title, date, and content; search titles/content; browse history; sort newest/oldest; confirm permanent deletion. An explicit New entry action creates a saved blank page (displayed as Untitled entry until named). Changes autosave after a 750 ms pause, with Save now/retry and clear unsaved/saving/saved/error feedback. Content formatting is preserved.
+- **Draft protection:** the shared writing provider remains mounted across navigation. Journal saves flush when the page is hidden; unsaved writing triggers an unload warning. Failed writes retain the current draft. Revision checks reject stale edits/deletions without overwriting another tab's saved version. Reloading saved data asks before discarding a dirty draft. Unsaved drafts are held in memory, so a failed save must be resolved or copied before closing the browser; they are not claimed to survive a forced browser shutdown.
+- **Persistence:** independent version-1 stores at `flowsync.journal` and `flowsync.checkins`, with stable IDs and created/updated timestamps. Both repositories have asynchronous contracts and storage subscriptions. All LocalStorage access remains centralized in `storageService`. Validation rejects malformed JSON, unsupported schemas, invalid dates/types/timestamps, duplicate IDs, and duplicate check-in dates without silently replacing data. Check-in uniqueness is rechecked on every save.
+- **Created:** `src/types/writing.ts`; `src/repositories/interfaces/JournalRepository.ts` and `CheckInRepository.ts`; `src/repositories/local/LocalJournalRepository.ts` and `LocalCheckInRepository.ts`; `src/services/writingStorage.ts`; `src/hooks/useJournal.ts`, `useCheckIn.ts`, and `useWriting.tsx`; `scripts/milestone7.smoke.mjs`.
+- **Modified:** `src/pages/CheckIn.tsx`, `src/pages/Journal.tsx`, `src/App.tsx`, `src/pages/Dashboard.tsx` (removed the obsolete writing-tools notice), `src/styles/index.css`, and this README. No dependencies added.
+- **Verified:** check-in creation/editing/history, saved ID/date uniqueness, optional fields, refresh persistence, draft retention across navigation, stale check-in rejection, and unload warnings; journal creation/editing/autosave, navigation and refresh persistence, title/content search, date sorting, delete cancellation/confirmation, stale-tab conflict protection, quota failure/retry/recovery; independent stores; malformed/duplicate/invalid-date/schema preservation; both themes and responsive layouts at desktop, 820, 390, and 320 pixels. Desktop and mobile screenshots were visually reviewed. Test contexts were isolated from actual user data.
+- **Build/regression:** TypeScript and production build passed. Milestone 2–6 browser suites and both workspace audit suites (eleven checks) passed alongside the milestone 7 suite. No runtime errors were captured in the writing test context.
+- **Known limits:** check-ins use explicit saving; the journal autosaves. LocalStorage is not an atomic multi-tab database. Physical-device and non-Chrome testing remain unverified. There are no known blocking milestone 7 issues.
+- **Next:** Milestone 8, pending the next development instruction. Windows desktop packaging remains milestone 10.
+
+Run `node scripts/milestone7.smoke.mjs` with the existing Playwright setup and running dev server. Use Daily Check-In or Daily Journal in the sidebar to open the new tools. Screenshots are saved under the Git-ignored `artifacts/` directory.
+
+## Milestone 8 report
+
+- **Export:** Settings → Export JSON downloads a versioned backup with an export timestamp, tasks, journal entries, check-ins, preferences, and persistent reminder history/read/dismiss state. Pending journal and check-in drafts are saved first; a failed writing save or unreadable store blocks export with an error rather than silently omitting data.
+- **Import:** Import JSON validates syntax, schema version, required fields, strict value types, task statuses/priorities, valid local dates and timestamps, unique IDs within each collection, unique check-in dates, complete preferences, and canonical notification identifiers. Valid files open a preview showing counts, export time, theme, and task view. Replacement requires explicit acknowledgement; cancellation leaves current data unchanged. Imports replace rather than merge. Historical reminder records may reference deleted tasks because they preserve deduplication state; only current unfinished tasks can produce visible reminders.
+- **Clear:** Clear application data requires typing CLEAR. It removes FlowSync's saved tasks, writing, preferences, and reminder state, restores dark/Kanban/due-date defaults, resets in-memory providers, and preserves unrelated browser storage. Unsaved writing drafts require a separate discard acknowledgement for either replacement action.
+- **Atomic storage:** existing installations keep using the five original keys until a confirmed import/clear. That action commits a complete versioned `flowsync.workspace` envelope using one atomic LocalStorage write. Ordinary repository reads/writes then use its logical stores through `storageService`; legacy keys are removed after the commit. If quota/permission/serialization fails before commit, the prior workspace remains untouched. If legacy cleanup fails after commit, an explicit warning reports it. No backend or new dependency was added. LocalStorage still does not provide concurrent multi-tab database transactions.
+- **Draft/cache safety:** replacement remounts the current tab's providers without a browser reload, clearing old autosave timers and reminder caches. Other tabs refresh changed logical stores. Workspace generation checks prevent open task editors and dirty writing drafts from saving over a replacement import, even if entry IDs/timestamps are unchanged. Those drafts remain available to copy before reloading the imported version.
+- **Backup schema:** top-level `schemaVersion: 1`, `exportedAt`, `tasks`, `journalEntries`, `checkIns`, `preferences`, and `notifications`. The backup format is independent of the internal workspace envelope. Invalid existing storage can be recovered through a valid confirmed import; unsafe export of corrupted data is blocked.
+- **Created:** `src/types/backup.ts`, `src/services/importService.ts`, `src/services/exportService.ts`, `src/components/settings/DataManagement.tsx`, `src/hooks/useWorkspaceReset.tsx`, and `scripts/milestone8.smoke.mjs`.
+- **Modified:** `src/services/storageService.ts`; `src/App.tsx`; `src/pages/Settings.tsx`; task/journal/check-in repository generation contracts and implementations; the notification repository's read contract/implementation; journal/check-in hooks for replacement protection and export save results; `src/hooks/useNotifications.ts`; `src/components/tasks/TaskDialog.tsx`; `src/styles/index.css`; and this README. Existing user changes outside this scope were preserved.
+- **Verified:** actual JSON download and all five data groups round-tripping; syntax/version/field/type/date/status/ID validation; import preview, cancellation, acknowledgement, and dirty-draft protection; appearance/view/sort restoration; atomic quota failure with byte-for-byte preservation of the old workspace; cross-tab dirty-check-in and task-editor protection; confirmed clearing and cancellation; unrelated storage preservation; post-import editing/persistence; post-clear task creation/persistence; corrupted envelope recovery; dark/light and responsive layouts at 820, 390, and 320 pixels. Screenshots were visually reviewed. Tests used isolated contexts and did not import into or clear actual user data.
+- **Build/regression:** milestone 2–8 browser suites and both audit suites (eleven audit checks) passed. TypeScript and Vite production build passed. No runtime errors were captured in the main import/export test context.
+- **Known limits:** physical-device and non-Chrome testing remain unverified. Browser storage quota still applies to the full workspace. There are no known blocking milestone 8 issues.
+- **Next:** Milestone 9, pending the next instruction. Windows desktop packaging remains the final milestone (10).
+
+Run `node scripts/milestone8.smoke.mjs` with the existing Playwright setup and dev server. The suite downloads temporary JSON files, imports test fixtures, simulates failures, and clears only its isolated browser contexts. Settings preview screenshots are written to the ignored `artifacts/` directory.
+
+## Milestone 9 report
+
+- **Repeatable verification:** `pnpm verify` runs formatting, strict TypeScript, production build, all milestone 2–9 browser suites, both audit suites, and the persistence regression suite against its own production preview. It cleans up only the preview process it launched and reports failures with a nonzero exit code. The runner waits for its own server announcement and bounds suite execution to prevent silent hangs.
+- **Accessibility/responsive review:** axe-core checks all five pages in dark/light themes at 1440, 820, and 320 pixels, plus task, notification, clear, import-preview, and journal-delete dialogs (35 scans per browser). The suite checks page overflow, keyboard containment, hidden file-input tab stops, and core task persistence while external requests are blocked. Existing suites additionally cover 390-pixel layouts, keyboard status changes, calendar navigation, Escape/focus restoration, validation, error states, and destructive confirmations. Desktop/mobile screenshots were visually reviewed. The 19 design restrictions remain unchanged.
+- **Persistence fixes:** a deterministic interleaving test reproduced task saves overwriting concurrent journal writes after import. Normal updates now write only their own generation-specific logical store, leaving the import snapshot immutable. Import/clear still commits one atomic snapshot and removes previous generation records. A second regression verifies that replacement during a save removes the obsolete write, retains the editor draft, and reports the conflict. These changes preserve existing legacy storage and the version-1 backup format.
+- **Keyboard/browser fixes:** calendar keyboard focus now updates during the render commit, allowing rapid consecutive keypresses across month boundaries. Dialogs explicitly wrap Tab/Shift+Tab through enabled controls; hidden file inputs are no longer tab stops. Removing a drag-time pointer-events rule fixed native task dragging in Edge while preserving the status-control alternative and drag feedback.
+- **Cleanup:** removed the unused `FeatureState` placeholder component, obsolete compact-task branches, and their unused styles. Applied checked-in Prettier formatting across source/tests/configuration and standardized Git text line endings. Existing user content, including daily quotes, was preserved.
+- **Tooling/files:** added `.prettierrc.json`, `.gitattributes`, `scripts/verify.mjs`, `scripts/milestone9.smoke.mjs`, and `scripts/persistence.refinement.mjs`. Added Playwright, axe-core's Playwright integration, and Prettier as development dependencies; updated `package.json`/`pnpm-lock.yaml`. Behavioral changes are concentrated in storage, calendar, modal, import input, and task workspace components; other source/test changes primarily improve formatting and browser selection. Updated this README's setup, verification, and storage documentation.
+- **Security/dependencies:** the updated dependency audit reported zero known advisories, and the credential-pattern scan found no matches. Core application use makes no external service requests; the new testing dependencies do not enter the production browser bundle.
+- **Verification:** final production verification passed in both Chrome and Microsoft Edge: formatting, TypeScript, production build, all milestone 2–9 suites, both audit suites, persistence regressions, keyboard containment, and external-request-blocked core use. Axe reported zero violations across 35 scans in each browser. All tests used isolated contexts, including tests that import/clear data. Actual user browser data was not seeded or cleared. This supersedes earlier reports that listed Edge testing as unverified.
+- **Limits:** automated accessibility checks do not certify complete accessibility. Manual screen-reader/physical-device testing and Safari/Firefox are unverified. Same-store simultaneous multi-tab writes remain subject to LocalStorage's lack of database transactions; ordinary stale edits are rejected by revision checks. Desktop installation is milestone 10.
+- **Status:** no known blocking web-build or runtime issues remain in the verified scope. Milestone 9 is complete. Next is milestone 10 (Windows desktop packaging), pending the next development instruction.

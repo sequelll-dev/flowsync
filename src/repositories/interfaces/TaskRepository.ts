@@ -1,6 +1,7 @@
 import type { Task, TaskInput } from '../../types/task'
 
 export interface TaskRepository {
+  generation(): string
   subscribe(onChange: () => void): () => void
   list(): Promise<Task[]>
   create(input: TaskInput): Promise<Task>

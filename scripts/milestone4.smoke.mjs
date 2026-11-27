@@ -1,31 +1,64 @@
 import assert from 'node:assert/strict'
 import { pathToFileURL } from 'node:url'
 import { mkdir } from 'node:fs/promises'
-const { chromium } = await import(process.env.FLOWSYNC_PLAYWRIGHT_MODULE ? pathToFileURL(process.env.FLOWSYNC_PLAYWRIGHT_MODULE).href : 'playwright')
-const browser = await chromium.launch({ channel: 'chrome', headless: true })
+const { chromium } = await import(
+  process.env.FLOWSYNC_PLAYWRIGHT_MODULE
+    ? pathToFileURL(process.env.FLOWSYNC_PLAYWRIGHT_MODULE).href
+    : 'playwright'
+)
+const browser = await chromium.launch({
+  channel: process.env.FLOWSYNC_BROWSER ?? 'chrome',
+  headless: true,
+})
 const origin = process.env.FLOWSYNC_TEST_URL ?? 'http://127.0.0.1:5173'
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
 const page = await context.newPage()
 const errors = []
-page.on('pageerror', error => errors.push(error.message))
+page.on('pageerror', (error) => errors.push(error.message))
 const records = [
   { title: 'Alpha brief', description: 'Research notes', priority: 'high', status: 'todo' },
   { title: 'Bravo report', priority: 'medium', status: 'in_progress', dueDate: '2026-11-25' },
   { title: 'Charlie archive', priority: 'low', status: 'completed', dueDate: '2026-11-24' },
   { title: 'Delta planning', priority: 'high', status: 'todo', dueDate: '2026-11-26' },
-].map((task, i) => ({ ...task, id: `test-${i}`, createdAt: `2026-11-20T0${i}:00:00.000Z`, updatedAt: `2026-11-20T0${i}:00:00.000Z`, ...(task.status === 'completed' ? { completedAt: `2026-11-20T0${i}:00:00.000Z` } : {}) }))
+].map((task, i) => ({
+  ...task,
+  id: `test-${i}`,
+  createdAt: `2026-11-20T0${i}:00:00.000Z`,
+  updatedAt: `2026-11-20T0${i}:00:00.000Z`,
+  ...(task.status === 'completed' ? { completedAt: `2026-11-20T0${i}:00:00.000Z` } : {}),
+}))
 const storage = () => page.evaluate(() => JSON.parse(localStorage.getItem('flowsync.tasks')).tasks)
 const names = () => page.locator('.task-record h3').allTextContents()
-async function matchNames(expected) { await page.waitForFunction(values => JSON.stringify([...document.querySelectorAll('.task-record h3')].map(el => el.textContent)) === JSON.stringify(values), expected) }
+async function matchNames(expected) {
+  await page.waitForFunction(
+    (values) =>
+      JSON.stringify(
+        [...document.querySelectorAll('.task-record h3')].map((el) => el.textContent),
+      ) === JSON.stringify(values),
+    expected,
+  )
+}
 try {
   await page.goto(origin)
-  await page.evaluate(tasks => localStorage.setItem('flowsync.tasks', JSON.stringify({ schemaVersion: 1, tasks })), records)
+  await page.evaluate(
+    (tasks) => localStorage.setItem('flowsync.tasks', JSON.stringify({ schemaVersion: 1, tasks })),
+    records,
+  )
   // Existing theme-only preferences upgrade without resetting the saved theme.
-  await page.evaluate(() => localStorage.setItem('flowsync.preferences', JSON.stringify({ schemaVersion: 1, preferences: { theme: 'light' } })))
-  await page.goto(`${origin}/#/tasks`); await page.reload()
+  await page.evaluate(() =>
+    localStorage.setItem(
+      'flowsync.preferences',
+      JSON.stringify({ schemaVersion: 1, preferences: { theme: 'light' } }),
+    ),
+  )
+  await page.goto(`${origin}/#/tasks`)
+  await page.reload()
   await page.getByRole('region', { name: 'Kanban board' }).waitFor()
   assert.equal(await page.locator('html').getAttribute('data-theme'), 'light')
-  assert.equal(await page.getByRole('button', { name: 'Kanban', exact: true }).getAttribute('aria-pressed'), 'true')
+  assert.equal(
+    await page.getByRole('button', { name: 'Kanban', exact: true }).getAttribute('aria-pressed'),
+    'true',
+  )
   const original = await storage()
   await page.getByRole('searchbox', { name: 'Search tasks' }).fill('research')
   await matchNames(['Alpha brief'])
@@ -44,12 +77,19 @@ try {
   await matchNames(['Delta planning', 'Alpha brief'])
   await page.getByRole('button', { name: 'Clear filters' }).click()
   await matchNames(['Charlie archive', 'Bravo report', 'Delta planning', 'Alpha brief'])
-  for (const [priority, expected] of [['low', ['Charlie archive']], ['medium', ['Bravo report']]]) {
+  for (const [priority, expected] of [
+    ['low', ['Charlie archive']],
+    ['medium', ['Bravo report']],
+  ]) {
     await page.getByLabel('Priority', { exact: true }).selectOption(priority)
     await matchNames(expected)
   }
   await page.getByRole('button', { name: 'Clear filters' }).click()
-  for (const [status, expected] of [['completed', ['Charlie archive']], ['in_progress', ['Bravo report']], ['todo', ['Delta planning', 'Alpha brief']]]) {
+  for (const [status, expected] of [
+    ['completed', ['Charlie archive']],
+    ['in_progress', ['Bravo report']],
+    ['todo', ['Delta planning', 'Alpha brief']],
+  ]) {
     await page.getByLabel('Status', { exact: true }).selectOption(status)
     await matchNames(expected)
   }
@@ -64,33 +104,76 @@ try {
   await page.getByRole('list', { name: 'Task list' }).waitFor()
   assert.equal(await page.getByLabel('Sort by').inputValue(), 'title')
   await page.getByRole('button', { name: 'Kanban', exact: true }).click()
-  const alpha = page.locator('.task-card').filter({ has: page.getByRole('heading', { name: 'Alpha brief', exact: true }) })
-  await alpha.locator('.drag-handle').dragTo(page.getByRole('region', { name: 'In Progress column', exact: true }).locator('.column-heading'))
-  await page.getByRole('region', { name: 'In Progress column', exact: true }).getByRole('heading', { name: 'Alpha brief', exact: true }).waitFor({timeout:3000})
-  let current = (await storage()).find(task => task.id === 'test-0')
-  assert.equal(current.status, 'in_progress'); assert.equal(current.description, 'Research notes'); assert.equal(current.createdAt, records[0].createdAt)
-  const delta = page.locator('.task-card').filter({ has: page.getByRole('heading', { name: 'Delta planning', exact: true }) })
-  await delta.locator('.drag-handle').dragTo(page.getByRole('region', { name: 'Completed column', exact: true }).locator('.column-heading'))
-  await page.getByRole('region', { name: 'Completed column', exact: true }).getByRole('heading', { name: 'Delta planning', exact: true }).waitFor()
-  assert.ok((await storage()).find(task => task.id === 'test-3').completedAt)
+  const alpha = page
+    .locator('.task-card')
+    .filter({ has: page.getByRole('heading', { name: 'Alpha brief', exact: true }) })
+  await alpha
+    .locator('.drag-handle')
+    .dragTo(
+      page
+        .getByRole('region', { name: 'In Progress column', exact: true })
+        .locator('.column-heading'),
+    )
+  await page
+    .getByRole('region', { name: 'In Progress column', exact: true })
+    .getByRole('heading', { name: 'Alpha brief', exact: true })
+    .waitFor({ timeout: 3000 })
+  let current = (await storage()).find((task) => task.id === 'test-0')
+  assert.equal(current.status, 'in_progress')
+  assert.equal(current.description, 'Research notes')
+  assert.equal(current.createdAt, records[0].createdAt)
+  const delta = page
+    .locator('.task-card')
+    .filter({ has: page.getByRole('heading', { name: 'Delta planning', exact: true }) })
+  await delta
+    .locator('.drag-handle')
+    .dragTo(
+      page
+        .getByRole('region', { name: 'Completed column', exact: true })
+        .locator('.column-heading'),
+    )
+  await page
+    .getByRole('region', { name: 'Completed column', exact: true })
+    .getByRole('heading', { name: 'Delta planning', exact: true })
+    .waitFor()
+  assert.ok((await storage()).find((task) => task.id === 'test-3').completedAt)
   await page.getByLabel('Status for Delta planning', { exact: true }).selectOption('todo')
-  await page.getByRole('region', { name: 'To Do column', exact: true }).getByRole('heading', { name: 'Delta planning', exact: true }).waitFor()
-  assert.equal((await storage()).find(task => task.id === 'test-3').completedAt, undefined)
+  await page
+    .getByRole('region', { name: 'To Do column', exact: true })
+    .getByRole('heading', { name: 'Delta planning', exact: true })
+    .waitFor()
+  assert.equal((await storage()).find((task) => task.id === 'test-3').completedAt, undefined)
   await page.getByLabel('Status for Delta planning', { exact: true }).focus()
   await page.keyboard.press('End')
   await page.keyboard.press('Enter')
-  await page.getByRole('region', { name: 'Completed column', exact: true }).getByRole('heading', { name: 'Delta planning', exact: true }).waitFor()
-  assert.ok((await storage()).find(task => task.id === 'test-3').completedAt)
+  await page
+    .getByRole('region', { name: 'Completed column', exact: true })
+    .getByRole('heading', { name: 'Delta planning', exact: true })
+    .waitFor()
+  assert.ok((await storage()).find((task) => task.id === 'test-3').completedAt)
   await page.getByLabel('Status for Delta planning', { exact: true }).selectOption('todo')
-  await page.getByRole('region', { name: 'To Do column', exact: true }).getByRole('heading', { name: 'Delta planning', exact: true }).waitFor()
+  await page
+    .getByRole('region', { name: 'To Do column', exact: true })
+    .getByRole('heading', { name: 'Delta planning', exact: true })
+    .waitFor()
   await page.getByRole('button', { name: 'Add task to Completed', exact: true }).click()
-  assert.equal(await page.getByLabel('Status', { exact: true }).filter({ has: page.locator('option[value=completed]') }).last().inputValue(), 'completed')
+  assert.equal(
+    await page
+      .getByLabel('Status', { exact: true })
+      .filter({ has: page.locator('option[value=completed]') })
+      .last()
+      .inputValue(),
+    'completed',
+  )
   await page.getByLabel('Title Required').fill('Column-created task')
   await page.getByRole('button', { name: 'Save task', exact: true }).click()
   await page.getByRole('dialog').waitFor({ state: 'hidden' })
-  assert.ok((await storage()).find(task => task.title === 'Column-created task').completedAt)
+  assert.ok((await storage()).find((task) => task.title === 'Column-created task').completedAt)
   await page.reload()
-  await page.getByRole('region', { name: 'In Progress column', exact: true }).getByRole('heading', { name: 'Alpha brief', exact: true }).waitFor({timeout:3000})
+  await page
+    .getByRole('region', { name: 'In Progress column', exact: true })
+    .getByRole('heading', { name: 'Alpha brief', exact: true })
+    .waitFor({ timeout: 3000 })
   await mkdir('artifacts', { recursive: true })
   await page.screenshot({ path: 'artifacts/milestone4-kanban-light.png', fullPage: true })
   await page.getByRole('button', { name: 'Switch to dark theme' }).click()
@@ -98,12 +181,16 @@ try {
   for (const width of [820, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 })
     await page.getByRole('region', { name: 'Kanban board' }).waitFor()
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No global overflow at ${width}`)
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      true,
+      `No global overflow at ${width}`,
+    )
   }
   await page.screenshot({ path: 'artifacts/milestone4-mobile.png', fullPage: true })
   await page.getByRole('button', { name: 'List', exact: true }).click()
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
-  await page.screenshot({path:'artifacts/milestone4-list-mobile.png',fullPage:true})
+  await page.screenshot({ path: 'artifacts/milestone4-list-mobile.png', fullPage: true })
   await page.getByRole('link', { name: 'Search tasks', exact: true }).click()
   await page.getByRole('searchbox').waitFor({ state: 'visible' })
   await page.waitForFunction(() => document.activeElement?.id === 'task-search')
@@ -115,11 +202,19 @@ try {
   assert.equal(await page.getByLabel('Sort by').inputValue(), 'priority')
   assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark')
   // Failed moves retain the previous status and all task information.
-  await page.evaluate(() => { Storage.prototype.setItem = () => { throw new DOMException('Full', 'QuotaExceededError') } })
+  await page.evaluate(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException('Full', 'QuotaExceededError')
+    }
+  })
   await page.getByLabel('Status for Alpha brief', { exact: true }).selectOption('completed')
   await page.getByRole('alert').waitFor()
-  assert.equal((await storage()).find(task => task.id === 'test-0').status, 'in_progress')
+  assert.equal((await storage()).find((task) => task.id === 'test-0').status, 'in_progress')
   assert.equal((await storage()).length, 5)
   assert.deepEqual(errors, [])
-  console.log('PASS: view switching, theme-only preference migration, title/description search, combined/clear filters, all sort orders, missing-date sorting, saved preferences, real native drag-and-drop, accessible status changes, per-column creation, timestamps, failed-move preservation, header search, and responsive widths.')
-} finally { await browser.close() }
+  console.log(
+    'PASS: view switching, theme-only preference migration, title/description search, combined/clear filters, all sort orders, missing-date sorting, saved preferences, real native drag-and-drop, accessible status changes, per-column creation, timestamps, failed-move preservation, header search, and responsive widths.',
+  )
+} finally {
+  await browser.close()
+}

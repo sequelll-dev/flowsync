@@ -17,38 +17,51 @@ export function useNotifications() {
   useEffect(() => {
     if (!ready || loading) return
     function refresh() {
-      try { session.current = notificationRepository.reconcile(candidates, session.current); setRecords(session.current); setError(null) }
-      catch (cause) {
+      try {
+        session.current = notificationRepository.reconcile(candidates, session.current)
+        setRecords(session.current)
+        setError(null)
+      } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Reminder state could not be saved.')
-        session.current = mergeReminders(session.current, candidates); setRecords(session.current)
+        session.current = mergeReminders(session.current, candidates)
+        setRecords(session.current)
       }
     }
     refresh()
-    return notificationRepository.subscribe(change => {
-      if (change.cleared || change.removed) {
+    return notificationRepository.subscribe((change) => {
+      if (change.cleared || change.removed || change.replaced) {
         session.current = []
         setRecords([])
         setError(null)
       }
       // A full clear also invalidates tasks. Wait for their provider to reload
       // instead of recreating records from this effect's older task snapshot.
-      if (!change.cleared) refresh()
+      if (!change.cleared && !change.replaced) refresh()
     })
   }, [candidates, ready, loading])
-  const notifications: TaskNotification[] = candidates.flatMap(candidate => {
-    const record = records.find(record => record.id === candidate.id)
-    const task = tasks.find(task => task.id === candidate.taskId)
+  const notifications: TaskNotification[] = candidates.flatMap((candidate) => {
+    const record = records.find((record) => record.id === candidate.id)
+    const task = tasks.find((task) => task.id === candidate.taskId)
     return record && task && !record.dismissedAt ? [{ ...record, task }] : []
   })
   function change(ids: string[], action: NotificationAction) {
     if (!ids.length) return
-    try { session.current = notificationRepository.update(session.current, ids, action); setRecords(session.current); setError(null) }
-    catch (cause) {
+    try {
+      session.current = notificationRepository.update(session.current, ids, action)
+      setRecords(session.current)
+      setError(null)
+    } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Reminder state could not be saved.')
       const now = new Date().toISOString()
-      session.current = session.current.map(record => ids.includes(record.id) ? {
-        ...record, readAt: record.readAt ?? now, ...(action === 'dismiss' ? { dismissedAt: record.dismissedAt ?? now } : {}),
-      } : record)
+      session.current = session.current.map((record) =>
+        ids.includes(record.id)
+          ? {
+              ...record,
+              readAt: record.readAt ?? now,
+              ...(action === 'dismiss' ? { dismissedAt: record.dismissedAt ?? now } : {}),
+            }
+          : record,
+      )
       setRecords(session.current)
     }
   }
