@@ -15,11 +15,11 @@ FlowSync is a local personal productivity workspace for task and deadline manage
 7. Personal productivity tools — complete: daily check-ins and journal.
 8. Settings and data management — complete.
 9. Testing and refinement — complete.
-10. Windows desktop application — final milestone, after milestones 1–9.
+10. Windows desktop application — complete (final milestone).
 
 ### Milestone 10 — Windows desktop application
 
-Package the completed FlowSync application as an installable Windows desktop app, reusing the React interface, repository architecture, existing features, and all 19 design restrictions. Choose the desktop framework during this milestone; Electron and Tauri are candidates, not a committed stack change.
+Package the completed FlowSync application as an installable Windows desktop app, reusing the React interface, repository architecture, existing features, and all 19 design restrictions. Electron bundles the production app in an isolated native window; electron-builder produces the per-user Windows installer.
 
 Deliverables and acceptance criteria:
 
@@ -30,11 +30,11 @@ Deliverables and acceptance criteria:
 - Verify every implemented feature in the packaged app, including navigation, task views, calendar, reminders while the app is open, journal, check-ins, themes, and data management.
 - Verify installation, launch, restart persistence, and uninstall behavior; document installer requirements, build steps, and local data location.
 
-This extends the final project completion criteria to include a working, tested Windows desktop package and documented browser-to-desktop data transfer. Browser push, background reminders, and other previously excluded features remain outside scope. Milestone 10 is planned only; no desktop framework or packaging dependencies are installed yet.
+This extends the final project completion criteria to include a working, tested Windows desktop package and documented browser-to-desktop data transfer. Browser push, background reminders, and other previously excluded features remain outside scope. The desktop wrapper has no preload script or renderer-facing native bridge. The React interface and repository architecture are shared with the web build.
 
 ## Current milestone
 
-**Milestone 9 — Testing and refinement.** Task creation, editing, confirmed deletion, completion/reopening, priorities, statuses, optional descriptions, and local due dates now work on My Tasks and the dashboard. The dashboard shows the shared Kanban/List task workspace and counts derived from all saved tasks. My Tasks keeps every task accessible, including completed tasks. Reusable native dialogs provide keyboard focus containment, Escape handling, validation, and save-failure feedback.
+**Milestone 10 — Windows desktop application — complete.** The installable Electron app runs the bundled interface offline, preserves local data, and supports browser backup transfer. Task creation, editing, confirmed deletion, completion/reopening, priorities, statuses, optional descriptions, and local due dates now work on My Tasks and the dashboard. The dashboard shows the shared Kanban/List task workspace and counts derived from all saved tasks. My Tasks keeps every task accessible, including completed tasks. Reusable native dialogs provide keyboard focus containment, Escape handling, validation, and save-failure feedback.
 
 Task operations use an asynchronous repository contract and a versioned LocalStorage implementation at `flowsync.tasks`. Components and hooks never access LocalStorage directly. Changes appear after a successful save. Missing storage starts empty; malformed, incompatible, invalid-date, or duplicate-ID records block mutations without overwriting existing data. Failed writes preserve the editor draft and previously saved tasks.
 
@@ -93,6 +93,8 @@ Test browsers use isolated contexts and fixtures. They never clear or seed your 
 ## Project structure
 
 ```text
+desktop/                   Electron main process and Windows icon
+electron-builder.json      Windows installer configuration
 public/                    Static assets
 src/
   assets/                  Bundled application assets
@@ -123,9 +125,9 @@ tsconfig*.json             Strict app and tooling type checks
 
 Empty directories contain `.gitkeep` files to preserve the planned structure in Git. Components and hooks do not access LocalStorage directly. `LocalPreferencesRepository` validates schema version 1 at `flowsync.preferences`; `storageService` owns JSON parsing and storage access. Reads never silently replace invalid data. A deliberate theme change can save a valid preference, and write failures leave a working session theme with feedback. The task repository now uses the same centralized service with task-specific error messages. Journal and check-in repositories use separate validated logical stores. After an import or clear, `flowsync.workspace` supplies an immutable generation snapshot and ordinary updates use independent `flowsync.store.<revision>.<logical-key>` records. This keeps task and journal writes from replacing each other. Import/clear publishes a new snapshot atomically and cleans up old generation records. Backup JSON exports logical data rather than these internal storage details.
 
-## Next milestone
+## Windows desktop app
 
-Milestone 10 packages the verified web application as an installable Windows desktop app. No desktop framework or packaging work has started; the choice of wrapper remains open until that milestone.
+The final milestone packages the verified web application with Electron. See the build, installation, and data-transfer instructions below.
 
 ## Configuration references
 
@@ -279,4 +281,63 @@ Run `node scripts/milestone8.smoke.mjs` with the existing Playwright setup and d
 - **Security/dependencies:** the updated dependency audit reported zero known advisories, and the credential-pattern scan found no matches. Core application use makes no external service requests; the new testing dependencies do not enter the production browser bundle.
 - **Verification:** final production verification passed in both Chrome and Microsoft Edge: formatting, TypeScript, production build, all milestone 2–9 suites, both audit suites, persistence regressions, keyboard containment, and external-request-blocked core use. Axe reported zero violations across 35 scans in each browser. All tests used isolated contexts, including tests that import/clear data. Actual user browser data was not seeded or cleared. This supersedes earlier reports that listed Edge testing as unverified.
 - **Limits:** automated accessibility checks do not certify complete accessibility. Manual screen-reader/physical-device testing and Safari/Firefox are unverified. Same-store simultaneous multi-tab writes remain subject to LocalStorage's lack of database transactions; ordinary stale edits are rejected by revision checks. Desktop installation is milestone 10.
-- **Status:** no known blocking web-build or runtime issues remain in the verified scope. Milestone 9 is complete. Next is milestone 10 (Windows desktop packaging), pending the next development instruction.
+- **Status:** no known blocking web-build or runtime issues remain in the verified scope. Milestone 9 is complete. Milestone 10 completion is documented below.
+
+## Windows installation and development
+
+The release targets Windows 10/11 x64, consistent with [Electron platform support](https://github.com/electron/electron#platform-support). This workspace is tested on Windows 11 x64; Windows 10 and ARM hardware have not been tested. Users do not need Node.js, a web server, or internet access to install from the full installer and use the app.
+
+Open `release/FlowSync-Setup-0.1.0-x64.exe`, choose an installation folder and the optional desktop shortcut, and launch FlowSync from the Start menu or shortcut. Installation is for the current Windows user and requests no administrator elevation. The full installer bundles the application and runtime. The installer and executables are currently unsigned: Windows may show an unknown-publisher or SmartScreen prompt. Public signed distribution requires your own code-signing certificate; no certificate or signing password is included in this repository.
+
+For development/builds on Windows x64:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm desktop
+pnpm desktop:pack
+pnpm desktop:dist
+pnpm verify:desktop
+```
+
+- `desktop` installs the official Electron runtime if absent, builds React, and opens the native app. It uses the production bundle, so restart the command after source changes; Vite hot reload remains available through `pnpm dev` for web development.
+- `desktop:pack` builds an unpacked Windows application at `release/win-unpacked/FlowSync.exe`. Keep that entire folder together.
+- `desktop:dist` builds the full NSIS installer in `release/`. Build tools download Electron/NSIS components on the first build; subsequent ordinary app use is offline. Bump `package.json` version for releases, retain the app ID/product name/origin/profile path, and run the new installer to upgrade. Automatic updates are not configured.
+- `verify:desktop` exercises the packaged app with a fresh temporary profile, including an actual web-export-to-desktop-import transfer. It briefly starts its own local preview only to produce the browser backup, then stops it before desktop testing. It never uses your normal browser or desktop profile. Test windows can appear without taking focus. Screenshots and reports are ignored under `artifacts/`.
+- `verify:installer` performs installation/upgrade/uninstallation checks in a workspace test folder. It refuses to run if FlowSync is already installed or its shortcuts exist, and removes the test installation afterward. Before running it, build the 0.1.0 release, then create a separate test-only 0.1.1 installer with the command below. The project version remains 0.1.0; do not distribute the upgrade-test artifact.
+
+```sh
+pnpm exec electron-builder --config electron-builder.json --config.extraMetadata.version=0.1.1 --config.directories.output=release/upgrade-test --win nsis --x64
+pnpm verify:installer
+```
+
+No Rust, Visual Studio C++ build tools, or separate database is required by the current app. The checked-in Windows icon is compiled from `public/favicon.svg`; `pnpm desktop:icon` regenerates it using installed Chrome.
+
+### Desktop data and browser transfer
+
+FlowSync stores desktop data in `%APPDATA%\FlowSync`, with Chromium local storage under `Local Storage/leveldb`. The stable `app://flowsync` origin and profile path keep data independent of the installation folder and version. Do not edit LevelDB files by hand or copy them while the app is running. Use JSON backups for transfers and recovery. Desktop data is local and is not encrypted by FlowSync.
+
+To bring existing browser data across:
+
+1. Open the browser version containing your data. In Settings, choose **Export JSON** and keep the downloaded backup.
+2. Open the desktop app. In Settings, choose **Import JSON** and select that backup.
+3. Review its counts and confirm replacement. Import replaces the destination workspace; export any existing desktop data first if needed.
+
+Browser and desktop workspaces are independent and do not sync automatically. Desktop export uses a native Save dialog; importing uses the normal file picker. The same validated backup format works in both directions. Journal autosave and manual check-in saving keep their existing behavior. Closing with unsaved writing asks whether to keep writing or discard it. Reminders are in-app only while FlowSync is running; there is no background tray process, system push, or startup task.
+
+Uninstall through Windows Settings → Apps → Installed apps → FlowSync. Normal uninstall removes program files and shortcuts while retaining local data for reinstallation. For a full data removal, use **Clear application data** inside FlowSync before uninstalling, or remove `%APPDATA%\FlowSync` yourself after closing/uninstalling. Keep a JSON backup before clearing data or upgrading.
+
+### Desktop implementation notes
+
+The sandboxed renderer has context isolation enabled, Node integration disabled, and no preload/IPC bridge. A [registered standard secure protocol](https://www.electronjs.org/docs/latest/api/protocol/) serves an allowlisted set of bundled asset types within `dist`; a restrictive Content Security Policy, denied permissions, request filter, blocked new windows, and navigation checks prevent the app from loading remote pages or arbitrary local files. These choices follow [Electron's security guidance](https://www.electronjs.org/docs/latest/tutorial/security/). The [NSIS configuration](https://www.electron.build/nsis/) uses an assisted per-user installer with shortcut selection and preserves user data on normal uninstall.
+
+Electron and packaging tools are development dependencies and are pinned by `pnpm-lock.yaml`. Targeted minimatch overrides in `pnpm-workspace.yaml` address [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) in two build-tool consumers; they use compatible named APIs and should be removed once upstream ranges include the fix. The unused Squirrel installer dependency's build script is explicitly disabled; this project builds NSIS installers. Keep Electron and packaging dependencies updated and rerun web, desktop, and installer verification for releases.
+
+## Milestone 10 completion report
+
+- **Delivered:** Electron 45.5.0 native Windows window, bundled offline assets/fonts, the existing React interface and all five pages, FlowSync executable/installer icons, a full per-user NSIS installer with desktop/Start menu shortcuts, single-instance behavior, native backup file dialogs, and unsaved-writing close protection. No backend, account, new product features, or design changes were introduced.
+- **Verified on Windows 11 x64:** the unpacked and installed executables passed browser-to-desktop backup transfer, all page navigation, task CRUD/native drag-and-drop/status/completion/search/sort/views, calendar task prefill and overdue display, reminder read state, check-in saving, journal autosave/history/search/sort/deletion, theme persistence, desktop backup export, typed clearing/restoration, and graceful restart persistence across all saved data domains. Remote/local-file requests, path traversal, popups, and external navigation were rejected; the renderer has no Node globals. Native window screenshots were visually reviewed.
+- **Installer lifecycle:** silent per-user installation created its registration and both shortcuts; a separately built 0.1.1 test installer upgraded 0.1.0 and retained all saved data. Uninstall removed program files, registration, and shortcuts, preserved a marker in the default data directory and the isolated test profile, and reinstall recovered all saved data. The test installation and marker were removed afterward. The interactive install wizard and SmartScreen experience were not manually tested.
+- **Regression checks:** `pnpm verify` passed formatting, TypeScript, production build, all previous milestone/audit suites, persistence-race checks, and 35 automated accessibility scans with no violations in Chrome. The new desktop suite and installer lifecycle suite passed. The dependency audit reported no known advisories after the targeted build-tool fix. Earlier milestone 9 also passed Edge; its full suite was not repeated for this packaging change.
+- **Artifacts:** `release/FlowSync-Setup-0.1.0-x64.exe` is the installer; `release/win-unpacked/FlowSync.exe` is the unpacked launcher. `release/SHA256SUMS.txt` records the installer checksum. Desktop and installer reports/screenshots are in ignored `artifacts/`. Build outputs and test backups are Git-ignored; distribute the installer through a release attachment rather than committing it to source control.
+- **Limits:** the installer is unsigned, automatic updates are not configured, and Windows 10/ARM, other operating systems, manual screen readers, and physical touch devices remain unverified. Normal uninstall retains data by design. The web and desktop workspaces are independent; JSON export/import is the supported transfer path.
+- **Status:** all ten milestones are complete within the verified scope. The Windows installer is ready for local use and review.

@@ -200,7 +200,7 @@ export function DataManagement() {
             <>
               <p className="delete-explanation">
                 All saved tasks, journal entries, check-ins, reminder state, and preferences will be
-                permanently removed from this browser. This cannot be undone.
+                permanently removed from this workspace. This cannot be undone.
               </p>
               <label className="history-label" htmlFor="clear-word">
                 Type CLEAR to confirm

@@ -24,6 +24,7 @@ try {
     '--check',
     'src',
     'scripts',
+    'desktop',
     '*.{json,html,ts}',
     'README.md',
   ])

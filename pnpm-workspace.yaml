@@ -1,0 +1,7 @@
+allowBuilds:
+  electron-winstaller: false
+# These two build-tool consumers use the named APIs retained by minimatch 11.
+# Remove the overrides once their upstream dependency ranges include the patched version.
+overrides:
+  'app-builder-lib>minimatch': ^11.0.1
+  '@electron/universal>minimatch': ^11.0.1

@@ -1,0 +1,26 @@
+{
+  "appId": "com.flowsync.desktop",
+  "productName": "FlowSync",
+  "directories": { "output": "release", "buildResources": "desktop" },
+  "files": ["dist/**/*", "desktop/main.cjs", "desktop/icon.ico", "package.json"],
+  "asar": true,
+  "npmRebuild": false,
+  "win": {
+    "target": [{ "target": "nsis", "arch": ["x64"] }],
+    "icon": "desktop/icon.ico",
+    "executableName": "FlowSync",
+    "signAndEditExecutable": true
+  },
+  "nsis": {
+    "artifactName": "FlowSync-Setup-${version}-${arch}.${ext}",
+    "oneClick": false,
+    "perMachine": false,
+    "allowElevation": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "FlowSync",
+    "runAfterFinish": false,
+    "deleteAppDataOnUninstall": false
+  }
+}
